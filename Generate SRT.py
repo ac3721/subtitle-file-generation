@@ -11,10 +11,11 @@ box_width = 78
 start = []
 end = []
 text = []
-folder_dir = "Images"
 debug = False
 debug_words = False
-check = True
+check = False
+folder_dir = "Test"
+offset = 42
 
 def numbers(image, array, count, i, debug = False):
     extracted_text = pytesseract.image_to_string(image)
@@ -37,7 +38,7 @@ def numbers(image, array, count, i, debug = False):
                 formatted = digits_only[:1] + ':' + digits_only[1:3] + ',' + digits_only[3:]
                 array.append(formatted)
             else:
-                array.append('****** ' + time)
+                array.append('*** ' + digits_only)
     else:
         count[i] += 1
         if count[i] > 1:
@@ -54,7 +55,7 @@ def crop_image_to_boxes(image, box_height=50):
         crops.append(cropped_img)
     return crops
 
-for image_path in os.listdir(folder_dir):
+def single_run(image_path):
     base_image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
     _, binary_image = cv2.threshold(base_image, 200, 255, cv2.THRESH_BINARY)
 
@@ -67,6 +68,7 @@ for image_path in os.listdir(folder_dir):
         (image.width * scale_factor, image.height * scale_factor),
         resample=Image.LANCZOS
     )
+    # resized_image.show()
 
     left_box = (0, 0, box_width, height)
     middle_box = (box_width, 0, width - box_width - 1, height)
@@ -74,7 +76,7 @@ for image_path in os.listdir(folder_dir):
 
     left_section = image.crop(left_box)
     middle_section = image.crop(middle_box)
-    right_section = image.crop(right_box)
+    right_section = image.crop(right_box) 
     count = [0, 0]
 
     if debug:
@@ -108,10 +110,25 @@ for image_path in os.listdir(folder_dir):
             text.append(words)
     if check:
         print(text)
-    print(len(start), len(end), len(text))
+
+    if len(start) != len(end):
+        if len(start) > len(end):
+            start.remove('******')
+        # for i in min(len(start), len(end)):
+
+    elif len(start) > len(text):
+        start.remove('******')
+        end.remove('******')
+
+    return len(start), len(end), len(text)
+    
+for image_name in os.listdir(folder_dir):
+    image_path = folder_dir + '/' + image_name
+    stats = single_run(image_path)
+    print(image_name, stats)
 
 with open('Output/output.srt', 'w') as output_file:
-    for i in range(len(start)):
-        output_file.write(f"{i+1}\n")
+    for i in range(len(text)):
+        output_file.write(f"{i + offset + 1}\n")
         output_file.write(f"00:{start[i]} --> 00:{end[i]}\n")
         output_file.write(f"{text[i]}\n\n")
