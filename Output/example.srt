@@ -1,0 +1,13 @@
+1
+00:02:35,843 --> 00:02:38,053
+Text for caption
+Line 2 of text
+
+2
+00:02:39,194 --> 00:02:42,198
+Second caption
+
+3
+00:02:42,797 --> 00:02:43,553
+Third Caption
+

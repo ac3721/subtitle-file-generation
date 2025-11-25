@@ -1,0 +1,60 @@
+02
+2
+:
+35
+35
+.
+843
+843
+Set to current time
+Text for caption
+Line 2 of text
+02
+2
+:
+38
+38
+.
+053
+53
+Set to current time
+Add Line
+Merge Lines
+02
+2
+:
+39
+39
+.
+194
+194
+Set to current time
+Second caption
+02
+2
+:
+42
+42
+.
+198
+198
+Set to current time
+Add Line
+Merge Lines
+02
+2
+:
+42
+42
+.
+797
+797
+Set to current time
+Third Caption
+02
+2
+:
+43
+43
+.
+553
