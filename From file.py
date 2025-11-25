@@ -1,7 +1,7 @@
 import numpy as np
 import os
 
-def parse_entries(filename):
+def parse_entries(filename, vtt = False):
     with open(filename, 'r', encoding='utf-8') as f:
         content = f.read()
     
@@ -14,12 +14,16 @@ def parse_entries(filename):
             start = f"{lines[0]}:{lines[3]},{lines[6]}"
             text = lines[9]
             end = f"{lines[10]}:{lines[13]},{lines[16]}"
-            results.append([start,text,end])
+            if vtt:
+                results.append([start.replace(',','.'),text,end.replace(',','.')])
+            else:
+                results.append([start,text,end])
 
     return results
 
 folder_dir = "Input text file"
 entries = []
+vtt = False
 offset = 0
 
 for filename in os.listdir(folder_dir):
@@ -30,8 +34,14 @@ for filename in os.listdir(folder_dir):
 
 print(len(entries))
 
-output_name = 'Output/output.srt'
+output_name = 'Output/output'
+if vtt:
+    output_name += '.vtt'
+else:
+    output_name += '.srt'
 with open(output_name, 'w') as output_file:
+    if vtt:
+        output_file.write(f"{'WEBVTT'}\n\n")
     for i in range(len(entries)):
         if not vtt:
             output_file.write(f"{i + offset + 1}\n")
