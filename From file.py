@@ -10,12 +10,10 @@ def parse_entries(filename, vtt = False):
 
     for entry in entries:
         lines = [line.strip() for line in entry.splitlines() if line.strip()]
-        print(lines)
-        if len(lines) >= 7:
+        if len(lines) >= 18:
             index = lines.index('Set to current time')
             start = f"{lines[index-8]}:{lines[index-5]},{lines[index-2]}"
             lines = lines[(index+1):]
-            print("second\n", lines)
             second_index = lines.index(':')
             text = lines[:(second_index - 2)]
             end = f"{lines[second_index - 2]}:{lines[second_index + 1]},{lines[second_index + 4]}"
@@ -23,7 +21,6 @@ def parse_entries(filename, vtt = False):
                 combined = [""]
                 for line in text:
                     combined[0] += line + '\n'
-                print (combined[0])
                 text = combined[0][:len(combined[0])-1]     
             else:
                 text = text[0]
@@ -39,7 +36,9 @@ entries = []
 vtt = False
 offset = 0
 
-for filename in os.listdir(folder_dir):
+input = os.listdir(folder_dir)
+input.remove('example.txt')
+for filename in input:
     file_path = folder_dir + '/' + filename
     parsed_data = parse_entries(file_path, vtt)
     entries += parsed_data
