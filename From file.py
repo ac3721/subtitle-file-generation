@@ -32,7 +32,7 @@ def parse_entries(filename, vtt = False):
     return results
 
 folder_dir = "Input text file"
-entries = []
+entries = set()
 vtt = False
 offset = 0
 
@@ -41,7 +41,7 @@ input.remove('example.txt')
 for filename in input:
     file_path = folder_dir + '/' + filename
     parsed_data = parse_entries(file_path, vtt)
-    entries += parsed_data
+    entries.update(tuple(entry) for entry in parsed_data)
     print(filename, len(parsed_data))
 
 print(len(entries))
@@ -51,11 +51,13 @@ if vtt:
     output_name += '.vtt'
 else:
     output_name += '.srt'
+
+entries_list = sorted(entries, key=lambda x: x[0])
 with open(output_name, 'w') as output_file:
     if vtt:
-        output_file.write(f"{'WEBVTT'}\n\n")
-    for i in range(len(entries)):
+        output_file.write("WEBVTT\n\n")
+    for i, entry in enumerate(entries_list):
         if not vtt:
             output_file.write(f"{i + offset + 1}\n")
-        output_file.write(f"00:{entries[i][0]} --> 00:{entries[i][2]}\n")
-        output_file.write(f"{entries[i][1]}\n\n")
+        output_file.write(f"00:{entry[0]} --> 00:{entry[2]}\n")
+        output_file.write(f"{entry[1]}\n\n")
