@@ -5,12 +5,12 @@ def parse_entries(filename, vtt = False):
     with open(filename, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    entries = content.split("Set to current time\nAdd Line\nMerge Lines")
+    entries = content.split("Add Line\nMerge Lines")
     results = []
 
     for entry in entries:
         lines = [line.strip() for line in entry.splitlines() if line.strip()]
-        if len(lines) >= 18:
+        if len(lines) >= 16:
             index = lines.index('Set to current time')
             start = f"{lines[index-8]}:{lines[index-5]},{lines[index-2]}"
             lines = lines[(index+1):]
@@ -23,7 +23,10 @@ def parse_entries(filename, vtt = False):
                     combined[0] += line + '\n'
                 text = combined[0][:len(combined[0])-1]     
             else:
-                text = text[0]
+                if len(text)==0:
+                    print(start, end, filename)
+                else:
+                    text = text[0]
             if vtt:
                 results.append([start.replace(',','.'),text,end.replace(',','.')])
             else:
@@ -53,7 +56,7 @@ else:
     output_name += '.srt'
 
 entries_list = sorted(entries, key=lambda x: x[0])
-with open(output_name, 'w') as output_file:
+with open(output_name, 'w',encoding="utf-8") as output_file:
     if vtt:
         output_file.write("WEBVTT\n\n")
     for i, entry in enumerate(entries_list):
