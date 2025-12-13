@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 folder = 'Input Video'
-video_name = "Pilot.mp4"
+video_name = "captions.mp4"
 video_path = folder + '/' + video_name
 cap = cv2.VideoCapture(video_path)
 
@@ -41,6 +41,7 @@ while True:
         timestamp_sec = frame_index / fps
         change_timestamps.append(timestamp_sec)
         prev_state = present
+        print(timestamp_sec)
 
     frame_index += 1
 
