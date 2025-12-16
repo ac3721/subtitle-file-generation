@@ -1,6 +1,11 @@
 import cv2
 import numpy as np
+from PIL import Image
+from io import BytesIO
+from openpyxl import Workbook
 import matplotlib.pyplot as plt
+from openpyxl.drawing.image import Image as XLImage
+from openpyxl.utils.units import pixels_to_points
 
 def find_text(img, debug = False):
     # Convert to HSV color space
@@ -54,6 +59,32 @@ def find_template(image, debug= False):
             cv2.destroyAllWindows()
     return coord
 
+def save_excel(frame, ws, row, column = 'C'):
+    rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    pil_image = Image.fromarray(rgb_image)
+
+    # Get dimensions
+    img_height_px, img_width_px = pil_image.size[1], pil_image.size[0]
+
+    # Convert pixels to points (96 DPI standard)
+    img_height_points = pixels_to_points(img_height_px)
+    img_width_points = pixels_to_points(img_width_px)
+
+    # Set cell row height = image height, column width to fit
+    ws.row_dimensions[row].height = img_height_points
+    ws.column_dimensions[column].width = img_width_points / 7.5 + 10
+
+    # Save image to buffer
+    buffer = BytesIO()
+    pil_image.save(buffer, format='PNG')
+    buffer.seek(0)
+
+    img = XLImage(buffer)
+    img.anchor = column + str(row)
+    img.width = img_width_points
+    img.height = img_height_points
+    ws.add_image(img)
+
 folder = 'Input Video'
 video_name = "Short.mp4"
 video_path = video_name #folder + '/' + video_name
@@ -79,7 +110,7 @@ while True:
 
         if present_pixel > 6000:
             # print(present_pixel)
-            coord = find_template(frame, debug=True)
+            coord = find_template(frame)
             cropped = frame[coord[0]:coord[1], coord[2]:coord[3]]
 
             present_pixel, filtered = find_text(cropped)
@@ -89,7 +120,7 @@ while True:
 
             timestamp_sec = frame_index / fps
             change_timestamps.append(timestamp_sec)
-            print(prev, timestamp_sec)
+            # print(prev, timestamp_sec)
             status = True
     else:
         cropped = frame[coord[0]:coord[1], coord[2]:coord[3]]
@@ -100,7 +131,7 @@ while True:
                 text.append(None)
                 timestamp_sec = frame_index / fps
                 change_timestamps.append(timestamp_sec)
-                print(prev, present_pixel, timestamp_sec, 'None')
+                # print(prev, present_pixel, timestamp_sec, 'None')
                 status = False
 
         elif abs(present_pixel - prev) > 500:
@@ -110,7 +141,7 @@ while True:
             
             timestamp_sec = frame_index / fps
             change_timestamps.append(timestamp_sec)
-            print(prev, present_pixel, timestamp_sec)
+            # print(prev, present_pixel, timestamp_sec)
             status = True
 
     frame_index += 1
@@ -121,10 +152,22 @@ cap.release()
 # for t in change_timestamps:
 #     print(t)
 
-for frame in text:
-    if frame is not None:
-        plt.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-        plt.axis("off")
-        plt.show()
-    # else:
-    #     print("None")
+# for frame in text:
+#     if frame is not None:
+#         plt.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+#         plt.axis("off")
+#         plt.show()
+#     # else:
+#     #     print("None")
+
+wb = Workbook()
+ws = wb.active
+
+for i in range(len(text)):
+    if text[i] is not None:
+        save_excel(text[i], ws, i+2)
+        ws[f'A{i+2}'] = change_timestamps[i]
+        if i+1 < len(text):
+            ws[f'B{i+2}'] = change_timestamps[i+1]
+
+wb.save('excel.xlsx')
