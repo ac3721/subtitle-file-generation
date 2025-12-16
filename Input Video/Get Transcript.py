@@ -8,11 +8,27 @@ from openpyxl.drawing.image import Image as XLImage
 from openpyxl.utils.units import pixels_to_points
 
 def find_text(img, debug = False):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    # Create mask for non-white pixels (tolerate near-white, e.g., >240)
+    white_mask = cv2.threshold(gray, 220, 255, cv2.THRESH_BINARY_INV)[1]
+    if debug:
+        cv2.imshow('Contours', white_mask)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        print(cv2.countNonZero(white_mask))
+        
+    non_white = cv2.bitwise_and(img, img, mask=white_mask)
+    if debug:
+        cv2.imshow('Non', non_white)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        
     # Convert to HSV color space
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    hsv = cv2.cvtColor(non_white, cv2.COLOR_BGR2HSV)
 
     # Define blue color range
-    lower_blue = np.array([90, 50, 50])
+    lower_blue = np.array([90, 75, 75])
     upper_blue = np.array([145, 255, 255])
 
     mask = cv2.inRange(hsv, lower_blue, upper_blue)
@@ -21,13 +37,14 @@ def find_text(img, debug = False):
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=1)
 
     # Extract blue text from image
-    blue_text_img = cv2.bitwise_and(img, img, mask=mask)
+    blue_text_img = cv2.bitwise_and(non_white, non_white, mask=mask)
     if debug:
         plt.imshow(cv2.cvtColor(blue_text_img, cv2.COLOR_BGR2RGB))
         plt.axis("off")
         plt.show()
         print(cv2.countNonZero(mask))
-    return cv2.countNonZero(mask), blue_text_img
+        
+    return cv2.countNonZero(mask), blue_text_img, abs(cv2.countNonZero(mask) - cv2.countNonZero(white_mask)) < 4000
 
 def find_template(image, debug= False):
     coord = None
@@ -86,7 +103,7 @@ def save_excel(frame, ws, row, column = 'C'):
     ws.add_image(img)
 
 folder = 'Input Video'
-video_name = "Subs.mp4"
+video_name = "Short.mp4"
 video_path = video_name #folder + '/' + video_name
 cap = cv2.VideoCapture(video_path)
 
@@ -106,14 +123,14 @@ while True:
         break
 
     if prev_state is None:
-        present_pixel, _ = find_text(frame)
+        present_pixel, _ , _= find_text(frame)
 
-        if present_pixel > 6000:
+        if present_pixel > 5000:
             # print(present_pixel)
-            coord = find_template(frame)
+            coord = find_template(frame,debug=True)
             cropped = frame[coord[0]:coord[1], coord[2]:coord[3]]
 
-            present_pixel, filtered = find_text(cropped)
+            present_pixel, filtered, _ = find_text(cropped)
             prev_state = filtered
             prev = present_pixel
             text.append(cropped)
@@ -124,9 +141,9 @@ while True:
             status = True
     else:
         cropped = frame[coord[0]:coord[1], coord[2]:coord[3]]
-        present_pixel, filtered = find_text(cropped)
+        present_pixel, filtered, valid = find_text(cropped)
 
-        if present_pixel < 1000:
+        if not valid and present_pixel < 1000:
             if status == True:
                 text.append(None)
                 timestamp_sec = frame_index / fps
@@ -134,7 +151,7 @@ while True:
                 # print(prev, present_pixel, timestamp_sec, 'None')
                 status = False
 
-        elif abs(present_pixel - prev) > 500:
+        elif valid and abs(present_pixel - prev) > 500:
             prev_state = filtered
             prev = present_pixel
             text.append(cropped)
