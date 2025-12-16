@@ -21,11 +21,11 @@ def find_text(img, debug = False):
         plt.imshow(cv2.cvtColor(blue_text_img, cv2.COLOR_BGR2RGB))
         plt.axis("off")
         plt.show()
-
+    print(cv2.countNonZero(mask))
     return cv2.countNonZero(mask), blue_text_img
 
 folder = 'Input Video'
-video_name = "Subs.mp4"
+video_name = "Short.mp4"
 video_path = video_name #folder + '/' + video_name
 cap = cv2.VideoCapture(video_path)
 
@@ -43,21 +43,31 @@ while True:
         break
 
     present_pixel, filtered = find_text(frame)
-
-    if prev_state is None:
-        prev_state = filtered
-        prev = present_pixel
-        text.append(frame)
-    elif filtered != prev_state & present_pixel - prev > 500:
-        # Color state changed at this frame
-        timestamp_sec = frame_index / fps
-        change_timestamps.append(timestamp_sec)
-        prev_state = filtered
-        print(timestamp_sec)
+    if present_pixel > 5000:
+        if prev_state is None:
+            prev_state = filtered
+            prev = present_pixel
+            text.append(frame)
+        elif present_pixel - prev > 1000: #filtered != prev_state and 
+            # Color state changed at this frame
+            timestamp_sec = frame_index / fps
+            change_timestamps.append(timestamp_sec)
+            prev_state = filtered
+            text.append(frame)
+            print(timestamp_sec)
 
     frame_index += 1
 
 cap.release()
+
+print("Color-change timestamps (seconds):")
+for t in change_timestamps:
+    print(t)
+
+for frame in text:
+    plt.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    plt.axis("off")
+    plt.show()
 
 print("Color-change timestamps (seconds):")
 for t in change_timestamps:
