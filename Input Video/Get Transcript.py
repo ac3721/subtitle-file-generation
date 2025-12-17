@@ -76,20 +76,21 @@ def find_template(image, debug= False):
             cv2.destroyAllWindows()
     return coord
 
-def save_excel(frame, ws, row, column = 'C'):
+def cell_size(frame):
     rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     pil_image = Image.fromarray(rgb_image)
 
-    # Get dimensions
     img_height_px, img_width_px = pil_image.size[1], pil_image.size[0]
 
     # Convert pixels to points (96 DPI standard)
     img_height_points = pixels_to_points(img_height_px)
     img_width_points = pixels_to_points(img_width_px)
 
-    # Set cell row height = image height, column width to fit
-    ws.row_dimensions[row].height = img_height_points
-    ws.column_dimensions[column].width = img_width_points / 7.5 + 10
+    return img_height_points, img_width_points
+    
+def save_excel(frame, ws, img_height_points, img_width_points, row, column = 'C'):
+    rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    pil_image = Image.fromarray(rgb_image)
 
     # Save image to buffer
     buffer = BytesIO()
@@ -102,8 +103,23 @@ def save_excel(frame, ws, row, column = 'C'):
     img.height = img_height_points
     ws.add_image(img)
 
+def convert_timestamp(input):
+    i_rounded = round(input, 3)
+    i_str = f"{i_rounded:.3f}"
+
+    parts = i_str.split('.')
+    integer_part = float(parts[0])
+    milli = parts[1].ljust(3, '0')[:3]
+    
+    minutes = int(integer_part // 60)
+    seconds = int(integer_part % 60)
+    
+    timestamp = f"{minutes:02d}:{seconds:02d}:{milli}"
+
+    return timestamp
+
 folder = 'Input Video'
-video_name = "Short.mp4"
+video_name = "Subs.mp4"
 video_path = video_name #folder + '/' + video_name
 cap = cv2.VideoCapture(video_path)
 
@@ -116,6 +132,8 @@ text = []
 change_timestamps = []
 coord = None
 status = False
+img_height_points, img_width_points = None, None
+column = 'C' #for images
 
 while True:
     ret, frame = cap.read()
@@ -134,8 +152,9 @@ while True:
             prev_state = filtered
             prev = present_pixel
             text.append(cropped)
+            img_height_points, img_width_points = cell_size(cropped)
 
-            timestamp_sec = frame_index / fps
+            timestamp_sec = convert_timestamp(frame_index / fps)
             change_timestamps.append(timestamp_sec)
             # print(prev, timestamp_sec)
             status = True
@@ -146,17 +165,17 @@ while True:
         if not valid and present_pixel < 1000:
             if status == True:
                 text.append(None)
-                timestamp_sec = frame_index / fps
+                timestamp_sec = convert_timestamp(frame_index / fps)
                 change_timestamps.append(timestamp_sec)
                 # print(prev, present_pixel, timestamp_sec, 'None')
                 status = False
 
-        elif valid and abs(present_pixel - prev) > 500:
+        elif valid and abs(present_pixel - prev) > 200: #(filtered != prev_state).any() :
             prev_state = filtered
             prev = present_pixel
             text.append(cropped)
             
-            timestamp_sec = frame_index / fps
+            timestamp_sec = convert_timestamp(frame_index / fps)
             change_timestamps.append(timestamp_sec)
             # print(prev, present_pixel, timestamp_sec)
             status = True
@@ -180,9 +199,14 @@ cap.release()
 wb = Workbook()
 ws = wb.active
 
+for row_num in range(1, len(text) + 5):
+    ws.row_dimensions[row_num].height = img_height_points
+    
+ws.column_dimensions[column].width = img_width_points / 7.5 + 10
+
 for i in range(len(text)):
     if text[i] is not None:
-        save_excel(text[i], ws, i+2)
+        save_excel(text[i], ws, img_height_points, img_width_points, i+2, column)
         ws[f'A{i+2}'] = change_timestamps[i]
         if i+1 < len(text):
             ws[f'B{i+2}'] = change_timestamps[i+1]
