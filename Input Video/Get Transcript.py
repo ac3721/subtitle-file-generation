@@ -63,7 +63,7 @@ def find_template(image, debug= False):
         y = max(0, y + padding)
         w = min(image.shape[1] - x, w - 2 * padding)
         h = min(image.shape[0] - y, h - 2 * padding)
-        coord = [y, y+h, x, x+w]
+        coord = [y-10, y+h+10, x, x+w]
         
         if debug:
             copy = image.copy()
@@ -130,58 +130,76 @@ prev_state = None
 prev = None
 text = []
 change_timestamps = []
+names = []
 coord = None
 status = False
 img_height_points, img_width_points = None, None
 column = 'C' #for images
+delay_frames = 37 * fps #int in seconds
+end = 6 * 60 * fps
 
 while True:
     ret, frame = cap.read()
     if not ret:
         break
 
-    if prev_state is None:
-        present_pixel, _ , _= find_text(frame)
+    if frame_index > delay_frames and frame_index < end:
+        if prev_state is None:
+            present_pixel, _ , _= find_text(frame)
 
-        if present_pixel > 5000:
-            # print(present_pixel)
-            coord = find_template(frame,debug=True)
-            cropped = frame[coord[0]:coord[1], coord[2]:coord[3]]
+            if present_pixel > 5000:
+                # print(present_pixel)
+                coord = find_template(frame,debug=True)
+                cropped = frame[coord[0]:coord[1], coord[2]:coord[3]]
 
-            present_pixel, filtered, _ = find_text(cropped)
-            prev_state = filtered
-            prev = present_pixel
-            text.append(cropped)
-            img_height_points, img_width_points = cell_size(cropped)
+                present_pixel, filtered, _ = find_text(cropped)
+                prev_state = filtered
+                prev = present_pixel
+                text.append(cropped)
+                img_height_points, img_width_points = cell_size(cropped)
 
-            timestamp_sec = convert_timestamp(frame_index / fps)
-            change_timestamps.append(timestamp_sec)
-            # print(prev, timestamp_sec)
-            status = True
-    else:
-        cropped = frame[coord[0]:coord[1], coord[2]:coord[3]]
-        present_pixel, filtered, valid = find_text(cropped)
-
-        if not valid and present_pixel < 1000:
-            if status == True:
-                text.append(None)
                 timestamp_sec = convert_timestamp(frame_index / fps)
                 change_timestamps.append(timestamp_sec)
-                # print(prev, present_pixel, timestamp_sec, 'None')
-                status = False
+                # print(prev, timestamp_sec)
+                status = True
+        else:
+            cropped = frame[coord[0]:coord[1], coord[2]:coord[3]]
+            present_pixel, filtered, valid = find_text(cropped)
 
-        elif valid and abs(present_pixel - prev) > 200: #(filtered != prev_state).any() :
-            prev_state = filtered
-            prev = present_pixel
-            text.append(cropped)
-            
-            timestamp_sec = convert_timestamp(frame_index / fps)
-            change_timestamps.append(timestamp_sec)
-            # print(prev, present_pixel, timestamp_sec)
-            status = True
+            if not valid and present_pixel < 1000:
+                if status == True:
+                    text.append(None)
+                    timestamp_sec = convert_timestamp(frame_index / fps)
+                    change_timestamps.append(timestamp_sec)
+                    print(prev, present_pixel, timestamp_sec, 'None')
+                    prev_state = filtered
+                    prev = present_pixel
+                    status = False
+
+            elif valid:
+                if status: #(filtered != prev_state).any() :
+                    if abs(present_pixel - prev) > 200:
+                        print(prev, present_pixel, timestamp_sec)
+                        prev_state = filtered
+                        prev = present_pixel
+                        text.append(cropped)
+                        
+                        timestamp_sec = convert_timestamp(frame_index / fps)
+                        change_timestamps.append(timestamp_sec)
+                        status = True
+                else:
+                    print(prev, present_pixel, timestamp_sec, 'second')
+                    prev_state = filtered
+                    prev = present_pixel
+                    text.append(cropped)
+                    
+                    timestamp_sec = convert_timestamp(frame_index / fps)
+                    change_timestamps.append(timestamp_sec)
+                    status = True
 
     frame_index += 1
 
+print(len(text))
 cap.release()
 
 # print("Color-change timestamps (seconds):")
@@ -200,7 +218,7 @@ wb = Workbook()
 ws = wb.active
 
 for row_num in range(1, len(text) + 5):
-    ws.row_dimensions[row_num].height = img_height_points
+    ws.row_dimensions[row_num].height = img_height_points + 10
     
 ws.column_dimensions[column].width = img_width_points / 7.5 + 10
 
