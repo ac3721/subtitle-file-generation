@@ -44,7 +44,8 @@ input.remove('example.txt')
 for filename in input:
     file_path = folder_dir + '/' + filename
     parsed_data = parse_entries(file_path, vtt)
-    entries.update(tuple(entry) for entry in parsed_data)
+    # entries.update(tuple(entry) for entry in parsed_data)
+    entries = parsed_data
     print(filename, len(parsed_data))
 
 print(len(entries))
