@@ -12,20 +12,16 @@ text = cols_as_arrays["Text"].astype(str)
 person = cols_as_arrays["Person"].astype(str)
 speaker = [len(person)] 
 
-# print(text[500])
-# print(person[500])
-# i = 500
-# str(person[i]).upper() + ": " + text[i]
+print(text[200])
+print(person[200])
+i = 500
+str(speaker[i]) + ": " + text[i]
 
 for i in person:
-    # print(str(i).lower())
     if str(i).lower() in names.keys():
         speaker.append(names[str(i).lower()])
-        # print(names[str(i).lower()],str(i).lower())
     else:
         speaker.append(str(i))
-
-# print(names.keys())
 
 print(speaker)
 
